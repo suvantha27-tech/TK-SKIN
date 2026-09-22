@@ -2,42 +2,43 @@
 <html lang="km">
 <head>
 <meta charset="UTF-8">
-<title>ប្រព័ន្ធ TK</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>TK CLOUD SYSTEM</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+
 <style>
 body{margin:0;font-family:Arial;background:#0b1220;color:#fff;display:flex}
 .sidebar{width:220px;background:#020617;padding:15px}
 .sidebar button{width:100%;padding:10px;margin:5px 0;background:#111827;color:#22c55e;border:none;text-align:left}
 .main{flex:1;padding:20px}
-.card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px}
 input,select{width:100%;padding:8px;margin:5px 0;border-radius:5px;border:none}
 button{background:#22c55e;color:#fff;padding:10px;border:none;width:100%;margin-top:5px}
+table{width:100%}
 </style>
 </head>
 
 <body>
 
 <div class="sidebar">
-<h3>TK SYSTEM</h3>
-<button onclick="show('dashboard')">🏠 ផ្ទាំងគ្រប់គ្រង</button>
+<h3>TK CLOUD</h3>
 <button onclick="show('invoice')">🧾 វិក័យប័ត្រ</button>
-<button onclick="show('customers')">👥 អតិថិជន</button>
 <button onclick="show('report')">📊 របាយការណ៍</button>
 </div>
 
 <div class="main">
 
-<div id="dashboard">
-<h2>📊 ផ្ទាំងគ្រប់គ្រង</h2>
-<div class="card">ថ្ងៃនេះ: $<span id="today">0</span></div>
-<div class="card">ខែនេះ: $<span id="month">0</span></div>
-<div class="card">ឆ្នាំនេះ: $<span id="year">0</span></div>
+<div id="login">
+<h3>🔐 ចូលប្រើ</h3>
+<input id="email" placeholder="Email">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">ចូល</button>
+<button onclick="register()">បង្កើតគណនី</button>
 </div>
 
 <div id="invoice" style="display:none;">
-<h2>🧾 បង្កើតវិក័យប័ត្រ</h2>
-<input id="customer" placeholder="ឈ្មោះអតិថិជន">
-<input type="date" id="date">
+<h3>🧾 វិក័យប័ត្រ</h3>
 
 <select id="product">
 <option value="Toner-5">Toner $5</option>
@@ -47,39 +48,62 @@ button{background:#22c55e;color:#fff;padding:10px;border:none;width:100%;margin-
 <input id="qty" type="number" value="1">
 <button onclick="add()">បន្ថែម</button>
 
-<table width="100%">
+<table>
 <tr><th>ឈ្មោះ</th><th>ចំនួន</th><th>សរុប</th><th></th></tr>
 <tbody id="list"></tbody>
 </table>
 
 <div>សរុប: $<span id="total">0</span></div>
-<button onclick="save()">រក្សាទុក</button>
-</div>
-
-<div id="customers" style="display:none;">
-<h2>👥 អតិថិជន</h2>
-<input id="custName">
-<button onclick="addCustomer()">រក្សាទុក</button>
-<ul id="custList"></ul>
+<button onclick="save()">រក្សាទុកទៅ Cloud</button>
 </div>
 
 <div id="report" style="display:none;">
-<h2>📊 ក្រាហ្វ</h2>
-<canvas id="chart"></canvas>
+<h3>📊 របាយការណ៍</h3>
+<div id="totalCloud">0</div>
 </div>
 
 </div>
 
 <script>
+// 🔥 REPLACE WITH YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyBvHXAhaN_qdYTizTQconANCrxELgj8A30",
+  authDomain: "tk-system-a7eb8.firebaseapp.com",
+  projectId: "tk-system-a7eb8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// LOGIN
+function register(){
+auth.createUserWithEmailAndPassword(
+document.getElementById("email").value,
+document.getElementById("pass").value
+).then(()=>alert("បង្កើតគណនីរួច"));
+}
+
+function login(){
+auth.signInWithEmailAndPassword(
+document.getElementById("email").value,
+document.getElementById("pass").value
+).then(()=>{
+alert("ចូលជោគជ័យ");
+document.getElementById("login").style.display="none";
+show('invoice');
+});
+}
+
+// NAV
 function show(p){
-document.querySelectorAll("#dashboard,#invoice,#customers,#report")
-.forEach(e=>e.style.display="none");
+document.getElementById("invoice").style.display="none";
+document.getElementById("report").style.display="none";
 document.getElementById(p).style.display="block";
 }
 
+// DATA
 let items=[];
-let history=JSON.parse(localStorage.getItem("history"))||[];
-let customers=JSON.parse(localStorage.getItem("customers"))||[];
 
 function add(){
 let p=document.getElementById("product").value.split("-");
@@ -105,66 +129,24 @@ document.getElementById("total").innerText=sum;
 
 function del(i){items.splice(i,1);render();}
 
+// SAVE CLOUD
 function save(){
-let total=parseFloat(document.getElementById("total").innerText);
-let date=document.getElementById("date").value;
-history.push({date,total});
-localStorage.setItem("history",JSON.stringify(history));
-update();
-draw();
-alert("រក្សាទុករួច!");
-}
-
-function addCustomer(){
-let n=document.getElementById("custName").value;
-customers.push(n);
-localStorage.setItem("customers",JSON.stringify(customers));
-showCust();
-}
-
-function showCust(){
-let h="";
-customers.forEach((c,i)=>{
-h+=`<li>${c} <button onclick="delCust(${i})">❌</button></li>`;
+db.collection("invoice").add({
+items:items,
+total:parseFloat(document.getElementById("total").innerText),
+date:new Date()
 });
-document.getElementById("custList").innerHTML=h;
-}
-function delCust(i){
-customers.splice(i,1);
-localStorage.setItem("customers",JSON.stringify(customers));
-showCust();
+alert("រក្សាទុក Cloud រួច!");
 }
 
-function update(){
-let t=0,m=0,y=0;
-let now=new Date();
-history.forEach(i=>{
-let d=new Date(i.date);
-if(d.toDateString()==now.toDateString()) t+=i.total;
-if(d.getMonth()==now.getMonth()) m+=i.total;
-if(d.getFullYear()==now.getFullYear()) y+=i.total;
+// LOAD REPORT
+db.collection("invoice").onSnapshot(snap=>{
+let total=0;
+snap.forEach(doc=>{
+total+=doc.data().total;
 });
-document.getElementById("today").innerText=t;
-document.getElementById("month").innerText=m;
-document.getElementById("year").innerText=y;
-}
-
-function draw(){
-let arr=Array(12).fill(0);
-history.forEach(i=>{
-let d=new Date(i.date);
-arr[d.getMonth()]+=i.total;
+document.getElementById("totalCloud").innerText="Total: $"+total;
 });
-new Chart(document.getElementById("chart"),{
-type:'bar',
-data:{labels:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
-datasets:[{data:arr}]}
-});
-}
-
-update();
-draw();
-showCust();
 </script>
 
 </body>
