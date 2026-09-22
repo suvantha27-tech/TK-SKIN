@@ -2,44 +2,41 @@
 <html lang="km">
 <head>
 <meta charset="UTF-8">
-<title>TK FULL SYSTEM</title>
-<link rel="manifest" href="manifest.json">
+<title>ប្រព័ន្ធ TK</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-body{display:flex;background:#0f172a;color:#fff;font-family:Arial;margin:0}
-.sidebar{width:200px;background:#020617;padding:15px}
-.sidebar button{width:100%;margin:5px 0;padding:10px;background:#111827;color:#22c55e;border:none;text-align:left}
+body{margin:0;font-family:Arial;background:#0b1220;color:#fff;display:flex}
+.sidebar{width:220px;background:#020617;padding:15px}
+.sidebar button{width:100%;padding:10px;margin:5px 0;background:#111827;color:#22c55e;border:none;text-align:left}
 .main{flex:1;padding:20px}
 .card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px}
 input,select{width:100%;padding:8px;margin:5px 0;border-radius:5px;border:none}
-button.action{background:#22c55e;color:#fff}
+button{background:#22c55e;color:#fff;padding:10px;border:none;width:100%;margin-top:5px}
 </style>
 </head>
 
 <body>
 
 <div class="sidebar">
-<h2>TK</h2>
-<button onclick="showPage('dashboard')">🏠 Dashboard</button>
-<button onclick="showPage('invoice')">🧾 Invoice</button>
-<button onclick="showPage('customers')">👥 Customers</button>
-<button onclick="showPage('stock')">📦 Stock</button>
-<button onclick="showPage('report')">📊 Report</button>
+<h3>TK SYSTEM</h3>
+<button onclick="show('dashboard')">🏠 ផ្ទាំងគ្រប់គ្រង</button>
+<button onclick="show('invoice')">🧾 វិក័យប័ត្រ</button>
+<button onclick="show('customers')">👥 អតិថិជន</button>
+<button onclick="show('report')">📊 របាយការណ៍</button>
 </div>
 
 <div class="main">
 
 <div id="dashboard">
-<h2>Dashboard</h2>
-<div class="card">Today: $<span id="today">0</span></div>
-<div class="card">Month: $<span id="month">0</span></div>
-<div class="card">Year: $<span id="year">0</span></div>
+<h2>📊 ផ្ទាំងគ្រប់គ្រង</h2>
+<div class="card">ថ្ងៃនេះ: $<span id="today">0</span></div>
+<div class="card">ខែនេះ: $<span id="month">0</span></div>
+<div class="card">ឆ្នាំនេះ: $<span id="year">0</span></div>
 </div>
 
 <div id="invoice" style="display:none;">
-<h2>Invoice</h2>
-<input id="customer" placeholder="Customer">
+<h2>🧾 បង្កើតវិក័យប័ត្រ</h2>
+<input id="customer" placeholder="ឈ្មោះអតិថិជន">
 <input type="date" id="date">
 
 <select id="product">
@@ -48,47 +45,41 @@ button.action{background:#22c55e;color:#fff}
 </select>
 
 <input id="qty" type="number" value="1">
-<button class="action" onclick="add()">Add</button>
+<button onclick="add()">បន្ថែម</button>
 
 <table width="100%">
-<tr><th>Name</th><th>Qty</th><th>Total</th></tr>
+<tr><th>ឈ្មោះ</th><th>ចំនួន</th><th>សរុប</th><th></th></tr>
 <tbody id="list"></tbody>
 </table>
 
-<div>Total: $<span id="total">0</span></div>
-
-<button class="action" onclick="save()">Save</button>
+<div>សរុប: $<span id="total">0</span></div>
+<button onclick="save()">រក្សាទុក</button>
 </div>
 
 <div id="customers" style="display:none;">
-<h2>Customers</h2>
+<h2>👥 អតិថិជន</h2>
 <input id="custName">
-<button onclick="addCustomer()">Save</button>
+<button onclick="addCustomer()">រក្សាទុក</button>
 <ul id="custList"></ul>
 </div>
 
-<div id="stock" style="display:none;">
-<h2>Stock</h2>
-<p>Toner: <span id="toner">50</span></p>
-<p>Serum: <span id="serum">50</span></p>
-</div>
-
 <div id="report" style="display:none;">
-<h2>Report</h2>
+<h2>📊 ក្រាហ្វ</h2>
 <canvas id="chart"></canvas>
 </div>
 
 </div>
 
 <script>
-function showPage(p){
-document.querySelectorAll("#dashboard,#invoice,#customers,#stock,#report")
+function show(p){
+document.querySelectorAll("#dashboard,#invoice,#customers,#report")
 .forEach(e=>e.style.display="none");
 document.getElementById(p).style.display="block";
 }
 
 let items=[];
 let history=JSON.parse(localStorage.getItem("history"))||[];
+let customers=JSON.parse(localStorage.getItem("customers"))||[];
 
 function add(){
 let p=document.getElementById("product").value.split("-");
@@ -99,53 +90,81 @@ render();
 
 function render(){
 let html="",sum=0;
-items.forEach(i=>{
-html+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>$${i.total}</td></tr>`;
+items.forEach((i,index)=>{
+html+=`<tr>
+<td>${i.name}</td>
+<td>${i.qty}</td>
+<td>$${i.total}</td>
+<td><button onclick="del(${index})">❌</button></td>
+</tr>`;
 sum+=i.total;
 });
 document.getElementById("list").innerHTML=html;
 document.getElementById("total").innerText=sum;
 }
 
+function del(i){items.splice(i,1);render();}
+
 function save(){
 let total=parseFloat(document.getElementById("total").innerText);
 let date=document.getElementById("date").value;
 history.push({date,total});
 localStorage.setItem("history",JSON.stringify(history));
-updateDashboard();
-drawChart();
-alert("Saved");
+update();
+draw();
+alert("រក្សាទុករួច!");
 }
 
-function updateDashboard(){
-let today=0,month=0,year=0;
+function addCustomer(){
+let n=document.getElementById("custName").value;
+customers.push(n);
+localStorage.setItem("customers",JSON.stringify(customers));
+showCust();
+}
+
+function showCust(){
+let h="";
+customers.forEach((c,i)=>{
+h+=`<li>${c} <button onclick="delCust(${i})">❌</button></li>`;
+});
+document.getElementById("custList").innerHTML=h;
+}
+function delCust(i){
+customers.splice(i,1);
+localStorage.setItem("customers",JSON.stringify(customers));
+showCust();
+}
+
+function update(){
+let t=0,m=0,y=0;
 let now=new Date();
 history.forEach(i=>{
 let d=new Date(i.date);
-if(d.toDateString()==now.toDateString()) today+=i.total;
-if(d.getMonth()==now.getMonth()) month+=i.total;
-if(d.getFullYear()==now.getFullYear()) year+=i.total;
+if(d.toDateString()==now.toDateString()) t+=i.total;
+if(d.getMonth()==now.getMonth()) m+=i.total;
+if(d.getFullYear()==now.getFullYear()) y+=i.total;
 });
-document.getElementById("today").innerText=today;
-document.getElementById("month").innerText=month;
-document.getElementById("year").innerText=year;
+document.getElementById("today").innerText=t;
+document.getElementById("month").innerText=m;
+document.getElementById("year").innerText=y;
 }
 
-function drawChart(){
-let months=Array(12).fill(0);
+function draw(){
+let arr=Array(12).fill(0);
 history.forEach(i=>{
 let d=new Date(i.date);
-months[d.getMonth()]+=i.total;
+arr[d.getMonth()]+=i.total;
 });
 new Chart(document.getElementById("chart"),{
 type:'bar',
 data:{labels:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
-datasets:[{label:'Income',data:months}]}
+datasets:[{data:arr}]}
 });
 }
 
-updateDashboard();
-drawChart();
+update();
+draw();
+showCust();
 </script>
 
 </body>
