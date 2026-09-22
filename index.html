@@ -2,13 +2,9 @@
 <html lang="km">
 <head>
 <meta charset="UTF-8">
-<title>TK ULTRA PRO</title>
+<title>TK FINAL SYSTEM</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b1220">
 
 <style>
 body{margin:0;font-family:Arial;background:#0b1220;color:#fff;display:flex}
@@ -17,11 +13,10 @@ body{margin:0;font-family:Arial;background:#0b1220;color:#fff;display:flex}
 .main{flex:1;padding:20px}
 input,select{width:100%;padding:8px;margin:5px 0;border-radius:5px;border:none}
 button{background:#22c55e;color:#fff;padding:10px;border:none;width:100%;margin-top:5px}
-table{width:100%}
-.card{background:#111827;padding:15px;border-radius:10px}
+table{width:100%;border-collapse:collapse}
+td,th{padding:8px;border-bottom:1px solid #333}
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </head>
@@ -29,12 +24,10 @@ table{width:100%}
 <body>
 
 <div class="sidebar">
-<h3>TK CLOUD</h3>
-<button onclick="show('dashboard')">🏠 Dashboard</button>
+<h3>TK SYSTEM</h3>
 <button onclick="show('invoice')">🧾 Invoice</button>
+<button onclick="show('history')">📜 History</button>
 <button onclick="show('customer')">👥 Customer</button>
-<button onclick="show('stock')">📦 Stock</button>
-<button onclick="show('report')">📊 Report</button>
 </div>
 
 <div class="main">
@@ -48,23 +41,12 @@ table{width:100%}
 <button onclick="register()">Register</button>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard" style="display:none;">
-<h3>🏠 Dashboard</h3>
-<div style="display:flex;gap:10px;">
-<div class="card">💰 Today<br><span id="today">$0</span></div>
-<div class="card">📅 Month<br><span id="month">$0</span></div>
-<div class="card">📊 Year<br><span id="year">$0</span></div>
-</div>
-<br>
-<canvas id="chart"></canvas>
-</div>
-
 <!-- INVOICE -->
 <div id="invoice" style="display:none;">
 <h3>🧾 Invoice</h3>
 
 <select id="customerSelect"></select>
+<input id="newCustomer" placeholder="បញ្ចូលអតិថិជនថ្មី">
 
 <select id="product">
 <option value="Toner-5">Toner $5</option>
@@ -72,15 +54,10 @@ table{width:100%}
 </select>
 
 <input id="qty" type="number" value="1">
-<select id="status">
-<option>Paid</option>
-<option>Unpaid</option>
-</select>
-
 <button onclick="add()">Add</button>
 
 <table>
-<tr><th>Name</th><th>Qty</th><th>Total</th><th></th></tr>
+<tr><th>Item</th><th>Qty</th><th>Total</th><th></th></tr>
 <tbody id="list"></tbody>
 </table>
 
@@ -88,7 +65,15 @@ table{width:100%}
 
 <button onclick="save()">☁️ Save</button>
 <button onclick="pdf()">📄 PDF</button>
-<button onclick="shareInvoice()">🔗 Share</button>
+</div>
+
+<!-- HISTORY -->
+<div id="history" style="display:none;">
+<h3>📜 History</h3>
+<table>
+<tr><th>ID</th><th>Customer</th><th>Total</th></tr>
+<tbody id="historyList"></tbody>
+</table>
 </div>
 
 <!-- CUSTOMER -->
@@ -100,24 +85,8 @@ table{width:100%}
 <ul id="clist"></ul>
 </div>
 
-<!-- STOCK -->
-<div id="stock" style="display:none;">
-<h3>📦 Stock</h3>
-<input id="sname" placeholder="Product">
-<input id="sqty" type="number">
-<button onclick="addStock()">Save</button>
-<ul id="slist"></ul>
 </div>
 
-<!-- REPORT -->
-<div id="report" style="display:none;">
-<h3>📊 Report</h3>
-<div id="totalCloud">0</div>
-</div>
-
-</div>
-
-<!-- FIREBASE -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -132,40 +101,52 @@ import {
 getFirestore,
 collection,
 addDoc,
-onSnapshot,
-query,
-where,
-getDocs,
-updateDoc
+onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔑 CONFIG (replace yours)
+// 🔑 CONFIG
 const firebaseConfig = {
-apiKey: "YOUR_KEY",
-authDomain: "YOUR_APP.firebaseapp.com",
-projectId: "YOUR_ID"
+apiKey: "AIzaSyBvHXAhaN_qdYTizTQconANCrxELgj8A30",
+  authDomain: "tk-system-a7eb8.firebaseapp.com",
+  projectId: "tk-system-a7eb8"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// AUTH
+// 🔐 REGISTER
 window.register = async ()=>{
-await createUserWithEmailAndPassword(auth,email.value,pass.value);
-alert("Registered!");
+try{
+let e=email.value;
+let p=pass.value;
+
+if(!e || !p){
+alert("បញ្ចូល Email និង Password");
+return;
+}
+
+await createUserWithEmailAndPassword(auth,e,p);
+alert("បង្កើតគណនីរួច!");
+}catch(err){
+alert(err.message);
+}
 };
 
+// 🔐 LOGIN
 window.login = async ()=>{
+try{
 await signInWithEmailAndPassword(auth,email.value,pass.value);
-alert("Login success!");
 login.style.display="none";
-show('dashboard');
+show('invoice');
+}catch(err){
+alert(err.message);
+}
 };
 
 // NAV
 window.show = (p)=>{
-["dashboard","invoice","customer","stock","report"].forEach(id=>{
+["invoice","history","customer"].forEach(id=>{
 document.getElementById(id).style.display="none";
 });
 document.getElementById(p).style.display="block";
@@ -200,31 +181,32 @@ window.del = (i)=>{items.splice(i,1);render();};
 
 // SAVE
 window.save = async ()=>{
-let invId="INV-"+Date.now();
+let id="INV-"+Date.now();
+
+let customer = customerSelect.value;
+let newCus = newCustomer.value;
+
+// add new customer
+if(newCus){
+customer=newCus;
+await addDoc(collection(db,"customer"),{
+name:newCus,
+phone:""
+});
+}
 
 await addDoc(collection(db,"invoice"),{
-id:invId,
-customer:customerSelect.value,
+id,
+customer,
 items,
 total:parseFloat(total.innerText),
-status:status.value,
 date:new Date()
 });
 
-// STOCK AUTO
-items.forEach(async i=>{
-let q = query(collection(db,"stock"), where("name","==",i.name));
-let snap = await getDocs(q);
-snap.forEach(doc=>{
-updateDoc(doc.ref,{
-qty: doc.data().qty - i.qty
-});
-});
-});
-
-alert("Saved "+invId);
+alert("Saved "+id);
 items=[];
 render();
+newCustomer.value="";
 };
 
 // PDF
@@ -232,22 +214,18 @@ window.pdf = ()=>{
 const { jsPDF } = window.jspdf;
 let doc=new jsPDF();
 doc.text("TK INVOICE",20,20);
+
 let y=30;
 items.forEach(i=>{
 doc.text(`${i.name} x${i.qty} = $${i.total}`,20,y);
 y+=10;
 });
+
 doc.text("Total: $"+total.innerText,20,y+10);
 doc.save("invoice.pdf");
 };
 
-// SHARE
-window.shareInvoice = ()=>{
-navigator.clipboard.writeText("Total: $"+total.innerText);
-alert("Copied!");
-};
-
-// CUSTOMER
+// CUSTOMER LIST
 window.addCustomer = ()=>{
 addDoc(collection(db,"customer"),{
 name:cname.value,
@@ -266,66 +244,19 @@ clist.innerHTML=html;
 customerSelect.innerHTML=opt;
 });
 
-// STOCK
-window.addStock = ()=>{
-addDoc(collection(db,"stock"),{
-name:sname.value,
-qty:parseInt(sqty.value)
-});
-};
-
-onSnapshot(collection(db,"stock"), snap=>{
+// HISTORY
+onSnapshot(collection(db,"invoice"), snap=>{
 let html="";
 snap.forEach(doc=>{
 let d=doc.data();
-html+=`<li>${d.name}: ${d.qty}</li>`;
+html+=`<tr>
+<td>${d.id}</td>
+<td>${d.customer}</td>
+<td>$${d.total}</td>
+</tr>`;
 });
-slist.innerHTML=html;
+historyList.innerHTML=html;
 });
-
-// DASHBOARD + REPORT
-let chart;
-
-onSnapshot(collection(db,"invoice"), snap=>{
-let totalAll=0;
-let months=Array(12).fill(0);
-let today=0,month=0,year=0;
-let now=new Date();
-
-snap.forEach(doc=>{
-let d=doc.data();
-totalAll+=d.total;
-
-let date=new Date(d.date.seconds*1000);
-let m=date.getMonth();
-months[m]+=d.total;
-
-if(date.toDateString()==now.toDateString()) today+=d.total;
-if(date.getMonth()==now.getMonth()) month+=d.total;
-if(date.getFullYear()==now.getFullYear()) year+=d.total;
-});
-
-totalCloud.innerText="Total: $"+totalAll;
-document.getElementById("today").innerText="$"+today;
-document.getElementById("month").innerText="$"+month;
-document.getElementById("year").innerText="$"+year;
-
-// CHART
-if(chart) chart.destroy();
-
-chart=new Chart(document.getElementById("chart"),{
-type:'bar',
-data:{
-labels:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
-datasets:[{label:"Income",data:months}]
-}
-});
-});
-
-// SERVICE WORKER
-if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('service-worker.js');
-}
 
 </script>
 
