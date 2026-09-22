@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+<meta charset="UTF-8">
+<title>TK PRO</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{font-family:Arial;background:#0f172a;color:#fff;padding:20px}
+.container{max-width:700px;margin:auto;background:#1e293b;padding:20px;border-radius:15px}
+input,select{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:none}
+button{padding:10px;background:#22c55e;border:none;color:#fff;width:100%;margin-top:10px}
+table{width:100%;margin-top:10px}
+td,th{padding:8px;text-align:center;border-bottom:1px solid #444}
+.total{text-align:right;margin-top:10px}
+canvas{background:#fff;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>TK PRO INVOICE</h2>
+
+<input id="customer" placeholder="ឈ្មោះអតិថិជន">
+<input type="date" id="date">
+
+<select id="product">
+<option value="Toner-5">Toner $5</option>
+<option value="Serum-10">Serum $10</option>
+<option value="Day-8">Day $8</option>
+<option value="Night-7">Night $7</option>
+</select>
+
+<input type="number" id="qty" value="1">
+<button onclick="add()">Add</button>
+
+<table>
+<tr><th>Name</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+<tbody id="list"></tbody>
+</table>
+
+<input type="number" id="discount" value="0" onchange="render()">
+
+<div class="total">Total: $<span id="total">0</span></div>
+
+<h3>Month: $<span id="month">0</span></h3>
+<h3>Year: $<span id="year">0</span></h3>
+
+<button onclick="save()">Save</button>
+<button onclick="window.print()">PDF</button>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+<script>
+let items=[];
+let history=JSON.parse(localStorage.getItem("history"))||[];
+
+function add(){
+ let p=document.getElementById("product").value.split("-");
+ let q=document.getElementById("qty").value;
+ items.push({name:p[0],qty:q,price:p[1],total:p[1]*q});
+ render();
+}
+
+function render(){
+ let html=""; let sum=0;
+ items.forEach(i=>{
+  html+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>$${i.price}</td><td>$${i.total}</td></tr>`;
+  sum+=i.total;
+ });
+ let d=document.getElementById("discount").value||0;
+ document.getElementById("list").innerHTML=html;
+ document.getElementById("total").innerText=sum-d;
+}
+
+function save(){
+ let date=document.getElementById("date").value;
+ let total=parseFloat(document.getElementById("total").innerText);
+ history.push({date,total});
+ localStorage.setItem("history",JSON.stringify(history));
+ calcReport();
+ drawChart();
+ alert("Saved!");
+}
+
+function calcReport(){
+ let m=0,y=0;
+ let now=new Date();
+ history.forEach(i=>{
+  let d=new Date(i.date);
+  if(d.getMonth()==now.getMonth()) m+=i.total;
+  if(d.getFullYear()==now.getFullYear()) y+=i.total;
+ });
+ document.getElementById("month").innerText=m;
+ document.getElementById("year").innerText=y;
+}
+
+function drawChart(){
+ let months=Array(12).fill(0);
+ history.forEach(i=>{
+  let d=new Date(i.date);
+  months[d.getMonth()]+=i.total;
+ });
+ new Chart(document.getElementById("chart"),{
+  type:'bar',
+  data:{labels:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+  datasets:[{label:'Income',data:months}]}
+ });
+}
+
+calcReport();
+drawChart();
+
+if("serviceWorker" in navigator){
+ navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+</body>
+</html>
