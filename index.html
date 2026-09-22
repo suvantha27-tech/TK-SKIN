@@ -2,119 +2,151 @@
 <html lang="km">
 <head>
 <meta charset="UTF-8">
-<title>TK PRO</title>
+<title>TK FULL SYSTEM</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-body{font-family:Arial;background:#0f172a;color:#fff;padding:20px}
-.container{max-width:700px;margin:auto;background:#1e293b;padding:20px;border-radius:15px}
-input,select{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:none}
-button{padding:10px;background:#22c55e;border:none;color:#fff;width:100%;margin-top:10px}
-table{width:100%;margin-top:10px}
-td,th{padding:8px;text-align:center;border-bottom:1px solid #444}
-.total{text-align:right;margin-top:10px}
-canvas{background:#fff;margin-top:20px}
+body{display:flex;background:#0f172a;color:#fff;font-family:Arial;margin:0}
+.sidebar{width:200px;background:#020617;padding:15px}
+.sidebar button{width:100%;margin:5px 0;padding:10px;background:#111827;color:#22c55e;border:none;text-align:left}
+.main{flex:1;padding:20px}
+.card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px}
+input,select{width:100%;padding:8px;margin:5px 0;border-radius:5px;border:none}
+button.action{background:#22c55e;color:#fff}
 </style>
 </head>
-<body>
-<div class="container">
-<h2>TK PRO INVOICE</h2>
 
-<input id="customer" placeholder="ឈ្មោះអតិថិជន">
+<body>
+
+<div class="sidebar">
+<h2>TK</h2>
+<button onclick="showPage('dashboard')">🏠 Dashboard</button>
+<button onclick="showPage('invoice')">🧾 Invoice</button>
+<button onclick="showPage('customers')">👥 Customers</button>
+<button onclick="showPage('stock')">📦 Stock</button>
+<button onclick="showPage('report')">📊 Report</button>
+</div>
+
+<div class="main">
+
+<div id="dashboard">
+<h2>Dashboard</h2>
+<div class="card">Today: $<span id="today">0</span></div>
+<div class="card">Month: $<span id="month">0</span></div>
+<div class="card">Year: $<span id="year">0</span></div>
+</div>
+
+<div id="invoice" style="display:none;">
+<h2>Invoice</h2>
+<input id="customer" placeholder="Customer">
 <input type="date" id="date">
 
 <select id="product">
 <option value="Toner-5">Toner $5</option>
 <option value="Serum-10">Serum $10</option>
-<option value="Day-8">Day $8</option>
-<option value="Night-7">Night $7</option>
 </select>
 
-<input type="number" id="qty" value="1">
-<button onclick="add()">Add</button>
+<input id="qty" type="number" value="1">
+<button class="action" onclick="add()">Add</button>
 
-<table>
-<tr><th>Name</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+<table width="100%">
+<tr><th>Name</th><th>Qty</th><th>Total</th></tr>
 <tbody id="list"></tbody>
 </table>
 
-<input type="number" id="discount" value="0" onchange="render()">
+<div>Total: $<span id="total">0</span></div>
 
-<div class="total">Total: $<span id="total">0</span></div>
+<button class="action" onclick="save()">Save</button>
+</div>
 
-<h3>Month: $<span id="month">0</span></h3>
-<h3>Year: $<span id="year">0</span></h3>
+<div id="customers" style="display:none;">
+<h2>Customers</h2>
+<input id="custName">
+<button onclick="addCustomer()">Save</button>
+<ul id="custList"></ul>
+</div>
 
-<button onclick="save()">Save</button>
-<button onclick="window.print()">PDF</button>
+<div id="stock" style="display:none;">
+<h2>Stock</h2>
+<p>Toner: <span id="toner">50</span></p>
+<p>Serum: <span id="serum">50</span></p>
+</div>
 
+<div id="report" style="display:none;">
+<h2>Report</h2>
 <canvas id="chart"></canvas>
+</div>
 
 </div>
 
 <script>
+function showPage(p){
+document.querySelectorAll("#dashboard,#invoice,#customers,#stock,#report")
+.forEach(e=>e.style.display="none");
+document.getElementById(p).style.display="block";
+}
+
 let items=[];
 let history=JSON.parse(localStorage.getItem("history"))||[];
 
 function add(){
- let p=document.getElementById("product").value.split("-");
- let q=document.getElementById("qty").value;
- items.push({name:p[0],qty:q,price:p[1],total:p[1]*q});
- render();
+let p=document.getElementById("product").value.split("-");
+let q=parseInt(document.getElementById("qty").value);
+items.push({name:p[0],qty:q,total:p[1]*q});
+render();
 }
 
 function render(){
- let html=""; let sum=0;
- items.forEach(i=>{
-  html+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>$${i.price}</td><td>$${i.total}</td></tr>`;
-  sum+=i.total;
- });
- let d=document.getElementById("discount").value||0;
- document.getElementById("list").innerHTML=html;
- document.getElementById("total").innerText=sum-d;
+let html="",sum=0;
+items.forEach(i=>{
+html+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>$${i.total}</td></tr>`;
+sum+=i.total;
+});
+document.getElementById("list").innerHTML=html;
+document.getElementById("total").innerText=sum;
 }
 
 function save(){
- let date=document.getElementById("date").value;
- let total=parseFloat(document.getElementById("total").innerText);
- history.push({date,total});
- localStorage.setItem("history",JSON.stringify(history));
- calcReport();
- drawChart();
- alert("Saved!");
+let total=parseFloat(document.getElementById("total").innerText);
+let date=document.getElementById("date").value;
+history.push({date,total});
+localStorage.setItem("history",JSON.stringify(history));
+updateDashboard();
+drawChart();
+alert("Saved");
 }
 
-function calcReport(){
- let m=0,y=0;
- let now=new Date();
- history.forEach(i=>{
-  let d=new Date(i.date);
-  if(d.getMonth()==now.getMonth()) m+=i.total;
-  if(d.getFullYear()==now.getFullYear()) y+=i.total;
- });
- document.getElementById("month").innerText=m;
- document.getElementById("year").innerText=y;
+function updateDashboard(){
+let today=0,month=0,year=0;
+let now=new Date();
+history.forEach(i=>{
+let d=new Date(i.date);
+if(d.toDateString()==now.toDateString()) today+=i.total;
+if(d.getMonth()==now.getMonth()) month+=i.total;
+if(d.getFullYear()==now.getFullYear()) year+=i.total;
+});
+document.getElementById("today").innerText=today;
+document.getElementById("month").innerText=month;
+document.getElementById("year").innerText=year;
 }
 
 function drawChart(){
- let months=Array(12).fill(0);
- history.forEach(i=>{
-  let d=new Date(i.date);
-  months[d.getMonth()]+=i.total;
- });
- new Chart(document.getElementById("chart"),{
-  type:'bar',
-  data:{labels:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
-  datasets:[{label:'Income',data:months}]}
- });
+let months=Array(12).fill(0);
+history.forEach(i=>{
+let d=new Date(i.date);
+months[d.getMonth()]+=i.total;
+});
+new Chart(document.getElementById("chart"),{
+type:'bar',
+data:{labels:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+datasets:[{label:'Income',data:months}]}
+});
 }
 
-calcReport();
+updateDashboard();
 drawChart();
-
-if("serviceWorker" in navigator){
- navigator.serviceWorker.register("service-worker.js");
-}
 </script>
+
 </body>
 </html>
