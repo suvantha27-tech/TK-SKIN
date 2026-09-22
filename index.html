@@ -2,11 +2,7 @@
 <html lang="km">
 <head>
 <meta charset="UTF-8">
-<title>TK CLOUD SYSTEM</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+<title>TK CLOUD PRO</title>
 
 <style>
 body{margin:0;font-family:Arial;background:#0b1220;color:#fff;display:flex}
@@ -16,19 +12,28 @@ body{margin:0;font-family:Arial;background:#0b1220;color:#fff;display:flex}
 input,select{width:100%;padding:8px;margin:5px 0;border-radius:5px;border:none}
 button{background:#22c55e;color:#fff;padding:10px;border:none;width:100%;margin-top:5px}
 table{width:100%}
+.card{background:#111827;padding:15px;border-radius:10px}
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 </head>
 
 <body>
 
 <div class="sidebar">
 <h3>TK CLOUD</h3>
+<button onclick="show('dashboard')">🏠 Dashboard</button>
 <button onclick="show('invoice')">🧾 វិក័យប័ត្រ</button>
-<button onclick="show('report')">📊 របាយការណ៍</button>
+<button onclick="show('customer')">👥 Customer</button>
+<button onclick="show('stock')">📦 Stock</button>
+<button onclick="show('report')">📊 Report</button>
 </div>
 
 <div class="main">
 
+<!-- LOGIN -->
 <div id="login">
 <h3>🔐 ចូលប្រើ</h3>
 <input id="email" placeholder="Email">
@@ -37,6 +42,19 @@ table{width:100%}
 <button onclick="register()">បង្កើតគណនី</button>
 </div>
 
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none;">
+<h3>🏠 Dashboard</h3>
+<div style="display:flex;gap:10px;">
+<div class="card">💰 Today<br><span id="today">$0</span></div>
+<div class="card">📅 Month<br><span id="month">$0</span></div>
+<div class="card">📊 Year<br><span id="year">$0</span></div>
+</div>
+<br>
+<canvas id="chart"></canvas>
+</div>
+
+<!-- INVOICE -->
 <div id="invoice" style="display:none;">
 <h3>🧾 វិក័យប័ត្រ</h3>
 
@@ -54,63 +72,96 @@ table{width:100%}
 </table>
 
 <div>សរុប: $<span id="total">0</span></div>
-<button onclick="save()">រក្សាទុកទៅ Cloud</button>
+
+<button onclick="save()">☁️ Save</button>
+<button onclick="pdf()">📄 PDF</button>
 </div>
 
+<!-- CUSTOMER -->
+<div id="customer" style="display:none;">
+<h3>👥 Customer</h3>
+<input id="cname" placeholder="ឈ្មោះ">
+<input id="cphone" placeholder="លេខទូរស័ព្ទ">
+<button onclick="addCustomer()">បន្ថែម</button>
+<ul id="clist"></ul>
+</div>
+
+<!-- STOCK -->
+<div id="stock" style="display:none;">
+<h3>📦 Stock</h3>
+<input id="sname" placeholder="Product">
+<input id="sqty" type="number">
+<button onclick="addStock()">Save</button>
+<ul id="slist"></ul>
+</div>
+
+<!-- REPORT -->
 <div id="report" style="display:none;">
-<h3>📊 របាយការណ៍</h3>
+<h3>📊 Report</h3>
 <div id="totalCloud">0</div>
 </div>
 
 </div>
 
-<script>
-// 🔥 REPLACE WITH YOUR FIREBASE CONFIG
+<!-- FIREBASE -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import {
+getAuth,
+createUserWithEmailAndPassword,
+signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+getFirestore,
+collection,
+addDoc,
+onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// 🔑 CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyBvHXAhaN_qdYTizTQconANCrxELgj8A30",
-  authDomain: "tk-system-a7eb8.firebaseapp.com",
-  projectId: "tk-system-a7eb8"
+apiKey: "YOUR_KEY",
+authDomain: "YOUR_APP.firebaseapp.com",
+projectId: "YOUR_ID"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-// LOGIN
-function register(){
-auth.createUserWithEmailAndPassword(
-document.getElementById("email").value,
-document.getElementById("pass").value
-).then(()=>alert("បង្កើតគណនីរួច"));
-}
+// AUTH
+window.register = async ()=>{
+await createUserWithEmailAndPassword(auth,email.value,pass.value);
+alert("បង្កើតគណនីរួច!");
+};
 
-function login(){
-auth.signInWithEmailAndPassword(
-document.getElementById("email").value,
-document.getElementById("pass").value
-).then(()=>{
-alert("ចូលជោគជ័យ");
-document.getElementById("login").style.display="none";
-show('invoice');
-});
-}
+window.login = async ()=>{
+await signInWithEmailAndPassword(auth,email.value,pass.value);
+alert("ចូលជោគជ័យ!");
+login.style.display="none";
+show('dashboard');
+};
 
 // NAV
-function show(p){
-document.getElementById("invoice").style.display="none";
-document.getElementById("report").style.display="none";
+window.show = (p)=>{
+["dashboard","invoice","customer","stock","report"].forEach(id=>{
+document.getElementById(id).style.display="none";
+});
 document.getElementById(p).style.display="block";
-}
+};
 
-// DATA
+// INVOICE
 let items=[];
 
-function add(){
-let p=document.getElementById("product").value.split("-");
-let q=parseInt(document.getElementById("qty").value);
+window.add = ()=>{
+let p=product.value.split("-");
+let q=parseInt(qty.value);
 items.push({name:p[0],qty:q,total:p[1]*q});
 render();
-}
+};
 
 function render(){
 let html="",sum=0;
@@ -123,30 +174,99 @@ html+=`<tr>
 </tr>`;
 sum+=i.total;
 });
-document.getElementById("list").innerHTML=html;
-document.getElementById("total").innerText=sum;
+list.innerHTML=html;
+total.innerText=sum;
 }
 
-function del(i){items.splice(i,1);render();}
+window.del = (i)=>{items.splice(i,1);render();};
 
-// SAVE CLOUD
-function save(){
-db.collection("invoice").add({
-items:items,
-total:parseFloat(document.getElementById("total").innerText),
+// SAVE
+window.save = async ()=>{
+await addDoc(collection(db,"invoice"),{
+items,
+total:parseFloat(total.innerText),
 date:new Date()
 });
-alert("រក្សាទុក Cloud រួច!");
-}
+alert("Saved!");
+};
 
-// LOAD REPORT
-db.collection("invoice").onSnapshot(snap=>{
-let total=0;
+// PDF
+window.pdf = ()=>{
+const { jsPDF } = window.jspdf;
+let doc=new jsPDF();
+doc.text("TK INVOICE",20,20);
+let y=30;
+items.forEach(i=>{
+doc.text(`${i.name} x${i.qty} = $${i.total}`,20,y);
+y+=10;
+});
+doc.text("Total: $"+total.innerText,20,y+10);
+doc.save("invoice.pdf");
+};
+
+// CUSTOMER
+window.addCustomer = ()=>{
+addDoc(collection(db,"customer"),{
+name:cname.value,
+phone:cphone.value
+});
+};
+
+onSnapshot(collection(db,"customer"), snap=>{
+let html="";
 snap.forEach(doc=>{
-total+=doc.data().total;
+let d=doc.data();
+html+=`<li>${d.name} - ${d.phone}</li>`;
 });
-document.getElementById("totalCloud").innerText="Total: $"+total;
+clist.innerHTML=html;
 });
+
+// STOCK
+window.addStock = ()=>{
+addDoc(collection(db,"stock"),{
+name:sname.value,
+qty:parseInt(sqty.value)
+});
+};
+
+onSnapshot(collection(db,"stock"), snap=>{
+let html="";
+snap.forEach(doc=>{
+let d=doc.data();
+html+=`<li>${d.name}: ${d.qty}</li>`;
+});
+slist.innerHTML=html;
+});
+
+// DASHBOARD + REPORT
+let chart;
+
+onSnapshot(collection(db,"invoice"), snap=>{
+let totalAll=0;
+let months=Array(12).fill(0);
+
+snap.forEach(doc=>{
+let d=doc.data();
+totalAll+=d.total;
+
+let m=new Date(d.date.seconds*1000).getMonth();
+months[m]+=d.total;
+});
+
+totalCloud.innerText="Total: $"+totalAll;
+
+// CHART
+if(chart) chart.destroy();
+
+chart=new Chart(document.getElementById("chart"),{
+type:'bar',
+data:{
+labels:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+datasets:[{label:"Income",data:months}]
+}
+});
+});
+
 </script>
 
 </body>
